@@ -1,0 +1,108 @@
+#include <LiquidCrystal.h>
+
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+const byte numChars = 32;
+const int numReads = 1024;
+char receivedChars[numChars]; // an array to store the received data
+int voltage[numReads];
+int delta[numReads];
+boolean newData = false;
+int dtime;
+void setup() {
+  // set up the LCD's number of columns and rows:
+  initialize(' ');
+  Serial.begin(9600);
+  Serial.println("<Arduino is ready>");
+  lcd.begin(16, 2);
+ 
+}
+
+void loop() {
+  // set the cursor to (0,0):
+  if(readVolt(A2)>0){
+    logCurrent();
+  }
+  
+}
+void initialize(char a){
+   for (int thisChar = 0; thisChar < numChars; thisChar++) {
+    receivedChars[thisChar] = a;
+  }
+   
+}
+void logCurrent(){
+  int timer = micros();
+  int index = 0;
+  while(micros()-timer < 100000 && index<numReads){
+  
+  voltage[index] = readVolt(A2);
+  delta[index] = micros();
+  index++;
+  delayMicroseconds(100);
+  }
+  
+}
+void recvWithEndMarker() {
+ static byte ndx = 0;
+ char endMarker = '\n';
+ char rc;
+ 
+ // if (Serial.available() > 0) {
+           while (Serial.available() > 0 && newData == false) {
+ rc = Serial.read();
+
+ if (rc != endMarker) {
+ receivedChars[ndx] = rc;
+ ndx++;
+ if (ndx >= numChars) {
+ ndx = numChars - 1;
+ }
+ }
+ else {
+ receivedChars[ndx] = '\0'; // terminate the string
+ ndx = 0;
+ newData = true;
+ }
+
+ 
+ }
+ 
+}
+
+
+float readVolt(int pin){
+pinVal = analogRead(pin);
+float v = (float)pinVal;
+v = v/1024;
+return v;
+}
+
+float readCurrent(int pin, float v1, float v2, float res){
+float c;
+c = v1 - v2;
+c = c/res;
+return c;
+}
+
+void showNewData(){
+if (newData == true) {
+   Serial.println(receivedChars);
+  lcd.clear();
+  
+  // set the display to automatically scroll:
+  lcd.setCursor(16, 1);
+  lcd.autoscroll();
+  for (int thisChar = 0; thisChar < 16; thisChar++) {
+    lcd.print(receivedChars[thisChar]);
+    receivedChars[thisChar] = ' ';
+    delay(500);
+  }
+  // set the cursor to (16,1):
+  
+  // turn off automatic scrolling
+  lcd.noAutoscroll();
+  newData = false;
+   }
+ 
+}
